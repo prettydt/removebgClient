@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import UploadArea from '@/components/UploadArea';
 import { uploadImageToRemoveBackground, downloadBlob } from '@/utils/request';
@@ -11,7 +11,23 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
 
+  // Cleanup URLs on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (originalImageUrl) URL.revokeObjectURL(originalImageUrl);
+      if (processedImageUrl) URL.revokeObjectURL(processedImageUrl);
+    };
+  }, [originalImageUrl, processedImageUrl]);
+
   const handleFileSelected = (file: File) => {
+    // Revoke previous URL before creating new one
+    if (originalImageUrl) {
+      URL.revokeObjectURL(originalImageUrl);
+    }
+    if (processedImageUrl) {
+      URL.revokeObjectURL(processedImageUrl);
+    }
+
     setSelectedFile(file);
     setError('');
     setProcessedImageUrl('');
@@ -27,7 +43,12 @@ export default function Home() {
 
     setLoading(true);
     setError('');
-    setProcessedImageUrl('');
+    
+    // Revoke previous processed image URL if exists
+    if (processedImageUrl) {
+      URL.revokeObjectURL(processedImageUrl);
+      setProcessedImageUrl('');
+    }
 
     try {
       const blob = await uploadImageToRemoveBackground(selectedFile);

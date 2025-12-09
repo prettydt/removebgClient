@@ -1,5 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import FormData from 'form-data';
 import axios from 'axios';
 
 export const config = {
@@ -61,10 +60,16 @@ export default async function handler(
   } catch (error: any) {
     console.error('Error forwarding request to backend:', error.message);
     
+    // Return generic error messages to avoid leaking backend information
     if (error.response) {
-      return res.status(error.response.status).json({
-        error: error.response.data?.message || 'Backend service error',
-      });
+      const status = error.response.status;
+      if (status === 400) {
+        return res.status(400).json({ error: 'Invalid image file' });
+      } else if (status === 401 || status === 403) {
+        return res.status(500).json({ error: 'Authentication error' });
+      } else if (status >= 500) {
+        return res.status(500).json({ error: 'Service temporarily unavailable' });
+      }
     }
     
     return res.status(500).json({ error: 'Failed to process image' });
